@@ -1,0 +1,30 @@
+Package: mTEC.10x.pipeline
+Title: Analyze Unbiased Thymic 10x Data
+Version: 0.0.0.9100
+Date created: 2018-06-12
+Date last modified: 2018-06-20
+Authors@R: person("Kristen", "Wells", email = "kwells4@stanford.edu", role = c("aut", "cre"))
+Description: This package analyzes the unbiased 10x data from the mTEC development project. This is currently a work in progress.
+Depends: R (>= 3.5.1)
+Imports: Seurat,
+	Matrix,
+    dplyr,
+    ggplot2,
+    RColorBrewer,
+    ggrepel,
+    Biobase,
+    data.table,
+    gplots,
+    plyr,
+    methods,
+    gridExtra
+Suggests: scran,
+	monocle,
+	reshape,
+	destiny,
+    BiocGenerics,
+    mTEC.10x.data
+License: All rights reserved.
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 6.1.1
