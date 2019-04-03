@@ -24,7 +24,7 @@ Suggests: scran,
 	destiny,
     BiocGenerics,
     mTEC.10x.data
-License: All rights reserved.
+License: MIT License
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.1.1
