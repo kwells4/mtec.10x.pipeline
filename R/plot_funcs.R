@@ -5,31 +5,26 @@
 #' anything from meta.data (quality) or cluster. Returns
 #' a list with ggplot objects. Returns objects under slots pca, tsne, umap
 #' depending on which of the three you ran.
+#' @inheritParams discretePlots
+#' @inheritParams continuousPlots
 #' @param mtec a Seurat object
 #' @param col_by the name of a gene or column from meta data with which to
 #' colour the plot. Can also be "cluster"
-#' @param UMAP OPTIONAL if the plot should be a umap. Defaults to TRUE
-#' @param tSNE OPTIONAL if the plot should be a tSNE. Defaults to FALSE
-#' @param PCA OPTIONAL if the plot should be a PCA. Defaults to FALSE
-#' @param color OPTIONAL the colors used to color the plots. For gene values, provide a list
-#' of two colors. For discrete values, provide a list as long as the object you want to color
-#' example: if you are coloring clusters and have 5 clusters, provide 5 colors. Default is
-#' set1 from ggplot2 for discrete and red/blue for continuous.
-#' @param save_plot OPTIONAL the path of the save file if the file should be saved.
-#' Must end in .pdf or .png. Default is NULL with no saved plot but the plot is printed.
-#' @param show_legend OPTIONAL if a legend for the plot should be shown. Default
-#' is TRUE
-#' @keywords tSNE, PCA, UMAP
+#' @param plot_type OPTIONAL what type of diminsional reduction to plot. Must be 
+#' a diminisional reduction listed in the dr slot of the seurat object. Default is
+#' UMAP.
+#' @param dims_use OPTIONAL
+#' @return a ggplot object that is the dimensional reduction of your data
+#' colored by the parameter of your choice.
+#' @keywords tSNE, PCA, UMAP, diminsional reduction plot
 #' @import ggplot2
 #' @import RColorBrewer
 #' @export
 #' @examples 
-#' tSNE_PCA(mTEC.10x.data::mtec_trace, "Aire")
-#' tSNE_PCA(mTEC.10x.data::mtec_trace, "nUMI", tSNE = FALSE, PCA = TRUE)
+#' plotDimRed(mTEC.10x.data::mtec_trace, "Aire")
+#' plotDimRed(mTEC.10x.data::mtec_trace, "nUMI", tSNE = FALSE, PCA = TRUE)
 
-tSNE_PCA <- function(mtec, col_by, UMAP = TRUE, tSNE = FALSE,
-	                 PCA = FALSE, color = NULL, save_plot = NULL,
-                   show_legend = TRUE) {
+plotDimRed <- function(mtec, col_by, plot_type = "umap", dims_use = NULL, ...) {
 	# Determine where in Seurat object to find variable to color by
 	if (col_by %in% rownames(mtec@data)){
 		mtec_data <- mtec@data
@@ -46,17 +41,39 @@ tSNE_PCA <- function(mtec, col_by, UMAP = TRUE, tSNE = FALSE,
 	# Make the name in the data frame the same regardless of what it was originally
 	names(col_by_data) <- "colour_metric"
 
-	 # Plot as discrete
+  if (is.null(dims_use)){
+    dims_use <- c(1,2)
+  }
+  # Make a data frame based on the cell embeddings from the plot type of choice
+  if (plot_type %in% names(mtec@dr)){
+    plot_coord <- mtec@dr[[plot_type]]@cell.embeddings
+    plot_names <- colnames(plot_coord)
+    ndims <- length(plot_names)
+    plot_cols <- lapply(dims_use, function(x){
+      if (x > ndims) {
+        stop("dims_use must be equal to or less than number of dimensions")
+      } else {
+        plot_col <- plot_names[x]
+        return(plot_col)
+      }
+    })
+    plot_cols <- unlist(plot_cols)
+    plot_coord <- plot_coord[colnames(plot_coord) %in% plot_cols, ]
+    axis_names <- colnames(plot_coord)
+    colnames(plot_coord) <- c("dim1", "dim2")
+    plot_df <- merge(plot_coord, col_by_data, by = "row.names")
+  } else {
+    stop("plot type must be a dimensional reduction in dr slot of Seurat object")
+  }
+	# Plot as discrete
 	if (!is.numeric(col_by_data$colour_metric)){
-		return_plot <- discrete_plots(mtec, col_by_data, col_by = col_by,
-      UMAP = UMAP, tSNE = tSNE, PCA = PCA, color = color, save_plot = save_plot,
-      show_legend = show_legend)
+		return_plot <- discretePlots(plot_df, axis_names = axis_names,
+                                 col_by = col_by, ...)
 
 	# Plot as continuous
 	}else{
-		return_plot <- continuous_plots(mtec, col_by_data, col_by = col_by,
-      UMAP = UMAP, tSNE = tSNE, PCA = PCA, color = color, save_plot = save_plot,
-      show_legend = show_legend)
+		return_plot <- continuousPlots(plot_df, axis_names = axis_names,
+                                   col_by = col_by, ...)
 	}
   return(return_plot)
 }
@@ -65,131 +82,55 @@ tSNE_PCA <- function(mtec, col_by, UMAP = TRUE, tSNE = FALSE,
 #' 
 #' This function allows you to plot discrete colours on a tsne and or a pca
 #' given a seurat object and dataframe. Must have already run FindClusters by
-#' seurat. Called by tSNE_PCA and works best through that function. Returns
-#' a list with ggplot objects. Returns objects under slots pca, tsne, umap
-#' depending on which of the three you ran.
-#' @param mtec a Seurat object
-#' @param mtec_data a dataframe containing the values to plot named by
-#' colour_metric
+#' seurat. Called by plotDimRed and works best through that function. Returns
+#' a ggplot object.
+#' @param plot_df a data_frame containing values used for plotting. This is df
+#' is made by the plotDimRed function. x and y values should be in columns labeled
+#' dim1 and dim2. discrete descriptions of how to color are given in the column
+#' colour_metric.
 #' @param col_by what to use to colour the plot. Can be anything from meta.data
-#' or clusters.
-#' @param UMAP OPTIONAL if the plot should be a umap. Defaults to TRUE
-#' @param tSNE OPTIONAL if the plot should be a tSNE. Defaults to FALSE
-#' @param PCA OPTIONAL if the plot should be a PCA. Defaults to FALSE
+#' or clusters. This will be the name of the color bar.
+#' @param axis_names OPTIONAL What to name the axes. This will be the default
+#' seurat name of the dimensional reduction if called by plotDimRed. Default is
+#' c("dim1", "dim2")
 #' @param color OPTIONAL what color should be used to color the plots. Must be the same
 #' number of items as col_by. Defaults to set1 from RColorBrewer
 #' @param save_plot OPTIONAL the path of the save file if the file should be saved.
-#' Must end in .pdf or .png. Default is NULL with no saved plot but the plot is printed.
+#' Must end in .pdf or .png. Default is NULL with no saved plot.
 #' @param show_legend OPTIONAL if a legend for the plot should be shown. Default
 #' is TRUE
-#' @keywords tSNE, PCA, UMAP, clusters
+#' @return a ggplot object that is the dimensional reduction of your data
+#' colored by the parameter of your choice.
+#' @keywords tSNE, PCA, UMAP, clusters, dimensional reduction plot
 #' @import ggplot2
 #' @import RColorBrewer
 #' @export
 
-discrete_plots <- function(mtec, mtec_data, col_by, UMAP = TRUE, tSNE = FALSE,
-	PCA = FALSE, color = NULL, save_plot = NULL, show_legend = TRUE){
-  return_plot <- list()
-  if (!(is.null(save_plot))){
-    extension <- substr(save_plot, nchar(save_plot)-2, nchar(save_plot))
-    if (extension == "pdf"){
-      pdf(save_plot)
-    } else if (extension == "png") {
-      png(save_plot)
-    } else {
-      print("save plot must be .png or .pdf")
-    }
-  }
-  	# Pull out umap coordinates if plotting a umap
-  if (UMAP){
-		umap_plot <- mtec@dr$umap@cell.embeddings
-		umap_plot <- merge(umap_plot, mtec_data, by = "row.names")
-		nColors <- length(levels(factor(umap_plot$colour_metric)))
+discretePlots <- function(plot_df, col_by, axis_names = c("dim1", "dim2"),
+                          color = NULL, save_plot = NULL, show_legend = TRUE){
+ 	base_plot <- ggplot2::ggplot(data = plot_df,
+                               ggplot2::aes_(~dim1, ~dim2))
 
-		# Make base of plot
-		p_umap <- ggplot2::ggplot(data = umap_plot,
-		                          ggplot2::aes_(~UMAP1, ~UMAP2))
-
-		# Add colors based on metric chosen
-		p_umap <- p_umap +
-		  ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
+    # Add colors based on metric chosen
+  base_plot <- base_plot +
+      ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
                           show.legend = show_legend) 
-		  #ggplot2::theme_classic()
 
-		# Color based on RColorBrewer if own palette isn't chosen
-		if (is.null(color)) {
-		 	p_umap <- p_umap + ggplot2::scale_color_manual(
-		 	  values = grDevices::colorRampPalette(
-		        RColorBrewer::brewer.pal(9, "Set1"))(nColors), name = col_by)
-		 } else {
-		 	p_umap <- p_umap + ggplot2::scale_color_manual(values = color, name = col_by)
-		 }
+  nColors <- length(levels(factor(plot_df$colour_metric)))
 
-		print(p_umap)
-    return_plot$umap <- p_umap
-	}
-
-	# Pull out tsne coordinates if plotting a tsne
-	if (tSNE){
-		tsne_plot <- mtec@dr$tsne@cell.embeddings
-		tsne_plot <- merge(tsne_plot, mtec_data, by = "row.names")
-		nColors <- length(levels(factor(tsne_plot$colour_metric)))
-
-		# Make base of plot
-		p_tsne <- ggplot2::ggplot(data = tsne_plot,
-		                          ggplot2::aes_(~tSNE_1, ~tSNE_2))
-
-		# Add colors based on metric chosen
-		p_tsne <- p_tsne +
-		  ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
-                          show.legend = show_legend) 
-		  #ggplot2::theme_classic()
-
-		# Color based on RColorBrewer if own palette isn't chosen
-		if (is.null(color)) {
-		 	p_tsne <- p_tsne + ggplot2::scale_color_manual(
-		 	  values = grDevices::colorRampPalette(
-		        RColorBrewer::brewer.pal(9, "Set1"))(nColors), name = col_by)
-		 } else {
-		 	p_tsne <- p_tsne + ggplot2::scale_color_manual(values = color, name = col_by)
-		 }
-
-		print(p_tsne)
-    return_plot$tsne <- p_tsne
-	}
-
-	# Pull out PCA coordinates if plotting a PCA
-	if (PCA){
-		pca_plot <- mtec@dr$pca@cell.embeddings
-		pca_plot <- merge(pca_plot, mtec_data, by = "row.names")
-		nColors <- length(levels(factor(pca_plot$colour_metric)))
-
-		# Make base of plot
-		p_pca <- ggplot2::ggplot(data = pca_plot, ggplot2::aes_(~PC1, ~PC2))
-
-		# Add colors based on metric chosen
-		p_pca <- p_pca +
-		  ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
-                          show.legend = show_legend)  
-		  #ggplot2::theme_classic()
-
-		# Color based on RColorBrewer if own palette isn't chosen
-		if (is.null(color)) {
-		    p_pca <- p_pca + ggplot2::scale_color_manual(
-		  	  values = grDevices::colorRampPalette(
-		        RColorBrewer::brewer.pal(9, "Set1"))(nColors), name = col_by)
-
-		} else {
-		 	p_pca <- p_pca + ggplot2::scale_color_manual(values = color, name = col_by)
-		}
-
-		print(p_pca)
-    return_plot$pca <- p_pca
-	}
-  if (!(is.null(save_plot))){
-    dev.off()
+  # Color based on RColorBrewer if own palette isn't chosen
+  if (is.null(color)) {
+    base_plot <- base_plot + ggplot2::scale_color_manual(
+      values = grDevices::colorRampPalette(
+          RColorBrewer::brewer.pal(9, "Set1"))(nColors), name = col_by)
+  } else {
+    base_plot <- base_plot + ggplot2::scale_color_manual(values = color, name = col_by)
   }
-  return(return_plot)
+
+  if (!(is.null(save_plot))){
+    ggplot2::ggsave(save_plot, plot = base_plot)
+  }
+  return(base_plot)
 }
 
 
@@ -197,41 +138,33 @@ discrete_plots <- function(mtec, mtec_data, col_by, UMAP = TRUE, tSNE = FALSE,
 #' 
 #' This function allows you to plot continuous colours on a tsne and or a pca
 #' given a seurat object and dataframe. Must have already run FindClusters by
-#' seurat. Called by tSNE_PCA and works best through that function. Returns
-#' a list with ggplot objects. Returns objects under slots pca, tsne, umap
-#' depending on which of the three you ran.
-#' @param mtec a Seurat object
-#' @param mtec_data a dataframe containing the values to plot named by
-#' colour_metric
-#' @param col_by what to use to colour the plot. Can be anything from genes or
-#' meta.data.
-#' @param UMAP OPTIONAL if the plot should be a umap. Defaults to TRUE
-#' @param tSNE OPTIONAL if the plot should be a tSNE. Defaults to FALSE
-#' @param PCA OPTIONAL if the plot should be a PCA. Defaults to FALSE
-#' @param color OPTIONAL what colors should be used to color the plots. Provide two
-#' colors in a list. Defaults to red/blue
+#' seurat. CCalled by plotDimRed and works best through that function. Returns
+#' a ggplot object.
+#' @param plot_df a data_frame containing values used for plotting. This is df
+#' is made by the plotDimRed function. x and y values should be in columns labeled
+#' dim1 and dim2. discrete descriptions of how to color are given in the column
+#' colour_metric.
+#' @param col_by what to use to colour the plot. Can be anything from meta.data
+#' or clusters. This will be the name of the color bar.
+#' @param axis_names OPTIONAL What to name the axes. This will be the default
+#' seurat name of the dimensional reduction if called by plotDimRed. Default is
+#' c("dim1", "dim2")
+#' @param color OPTIONAL what color should be used to color the plots. Must be a list
+#' of two colors, the first color as low and the second color as high. Default is low
+#' is blue and high is red.
 #' @param save_plot OPTIONAL the path of the save file if the file should be saved.
-#' Must end in .pdf or .png. Default is NULL with no saved plot but the plot is printed.
+#' Must end in .pdf or .png. Default is NULL with no saved plot.
 #' @param show_legend OPTIONAL if a legend for the plot should be shown. Default
 #' is TRUE
-#' @keywords tSNE, PCA, clusters
+#' @return a ggplot object that is the dimensional reduction of your data
+#' colored by the parameter of your choice.
+#' @keywords tSNE, PCA, clusters, dimensional reduction plot
 #' @import ggplot2
 #' @import RColorBrewer
 #' @export
 
-continuous_plots <- function(mtec, mtec_data, col_by, UMAP = TRUE, tSNE = TRUE,
-	PCA = FALSE, color = NULL, save_plot = NULL, show_legend = TRUE){
-  return_plot <- list()
-  if (!(is.null(save_plot))){
-    extension <- substr(save_plot, nchar(save_plot)-2, nchar(save_plot))
-    if (extension == "pdf"){
-      pdf(save_plot)
-    } else if (extension == "png") {
-      png(save_plot)
-    } else {
-      print("save plot must be .png or .pdf")
-    }
-  }
+continuousPlots <- function(plot_df, col_by, axis_names = c("dim1", "dim2"),
+                            color = NULL, save_plot = NULL, show_legend = TRUE){
 	if (is.null(color)) {
 	  low <- "#00AFBB"
 	  high <- "#FC4E07"
@@ -239,57 +172,19 @@ continuous_plots <- function(mtec, mtec_data, col_by, UMAP = TRUE, tSNE = TRUE,
 	  low <- color[1]
 	  high <- color[2]
 	}
-	if (UMAP){
-		umap_plot <- mtec@dr$umap@cell.embeddings
-		umap_plot <- merge(umap_plot, mtec_data, by = "row.names")
-		p_umap <- ggplot2::ggplot(data = umap_plot, ggplot2::aes_(~UMAP1, ~UMAP2))
 
-		p_umap <- p_umap +
-	    ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
-                          show.legend = show_legend) +
- 		  ggplot2::scale_color_gradient(low = low,
- 		                                high = high, name = col_by) 
- 		  #ggplot2::theme_classic()
+	base_plot <- ggplot2::ggplot(data = plot_df, ggplot2::aes_(~dim1, ~dim2))
 
-		print(p_umap)
-    return_plot$umap <- p_umap
-  		
-	}
-	if (tSNE){
-		tsne_plot <- mtec@dr$tsne@cell.embeddings
-		tsne_plot <- merge(tsne_plot, mtec_data, by = "row.names")
-		p_tsne <- ggplot2::ggplot(data = tsne_plot, ggplot2::aes_(~tSNE_1, ~tSNE_2))
-
-		p_tsne <- p_tsne +
-	  	ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
-                          show.legend = show_legend) +
- 		  ggplot2::scale_color_gradient(low = low,
- 			                            high = high, name = col_by) 
- 		  #ggplot2::theme_classic()
-
-		print(p_tsne)
-    return_plot$tsne <- p_tsne
-  		
-	}
-  if (PCA){
-		pca_plot <- mtec@dr$pca@cell.embeddings
-		pca_plot <- merge(pca_plot, mtec_data, by = "row.names")
-		p_pca <- ggplot2::ggplot(data = pca_plot, ggplot2::aes_(~PC1, ~PC2))
-
-		p_pca <- p_pca +
-		  ggplot2::geom_point(aes_(colour = ~colour_metric),
-                         show.legend = show_legend) + 
-			ggplot2::scale_color_gradient(low = low,
-			                              high = high, name = col_by) 
-			#ggplot2::theme_classic()
-
-		print(p_pca)
-    return_plot$pca <- p_pca
-	}
+	base_plot <- base_plot +
+	  ggplot2::geom_point(ggplot2::aes_(colour = ~colour_metric),
+                        show.legend = show_legend) +
+ 		ggplot2::scale_color_gradient(low = low,
+ 		                              high = high, name = col_by) 
+ 		 
   if (!(is.null(save_plot))){
-    dev.off()
+    ggplot2::ggsave(save_plot, plot = base_plot)
   }
-  return(return_plot)
+  return(base_plot)
 }
 
 #' Plots three plots in one image
@@ -314,6 +209,8 @@ continuous_plots <- function(mtec, mtec_data, col_by, UMAP = TRUE, tSNE = TRUE,
 #' @param ncol OPTIONAL number of columns for output plots default is 1
 #' @param group_color OPTIONAL if a plot of group colors should be output. Default
 #' is true
+#' @return a ggplot object containing the jitter or violin plots arranged with
+#' grid extra
 #' @keywords violin, jitter, trio
 #' @import gridExtra
 #' @export
@@ -324,16 +221,6 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
                        sep_by = "cluster", save_plot = NULL,
                        nrow = NULL, ncol = NULL, group_color = TRUE){
   gene_list_stage <- c()
-  if (!(is.null(save_plot))){
-    extension <- substr(save_plot, nchar(save_plot)-2, nchar(save_plot))
-    if (extension == "pdf"){
-      pdf(save_plot)
-    } else if (extension == "png") {
-      png(save_plot)
-    } else {
-      print("save plot must be .png or .pdf")
-    }
-  }
   if (plot_jitter) {
     if (group_color) {
       # Make a jitter plot based on expression of each gene given in the gene
@@ -347,7 +234,8 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
       }
     
       # Make a plot consisting of all plots made above
-      gridExtra::grid.arrange(grobs = gene_list_stage, nrow = length(geneset))
+      full_plot <- gridExtra::grid.arrange(grobs = gene_list_stage,
+                                           nrow = length(geneset))
     }
     # Make jitter plots colored by cell cycle stage
     if(cell_cycle){
@@ -360,7 +248,8 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
       }
     
       # Arrange all plots into one figure
-      gridExtra::grid.arrange(grobs = gene_list_cycle, nrow = length(geneset))
+      full_plot <- gridExtra::grid.arrange(grobs = gene_list_cycle,
+                                           nrow = length(geneset))
     }
   }
   if (plot_violin || jitter_and_violin) {
@@ -380,12 +269,14 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
     if (is.null(ncol)){
       ncol <- 1
     }
-    gridExtra::grid.arrange(grobs = gene_list_stage, nrow = nrow, ncol = ncol)
+    full_plot <- gridExtra::grid.arrange(grobs = gene_list_stage,
+                                         nrow = nrow, ncol = ncol)
     
   }
   if (!(is.null(save_plot))){
-    dev.off()
+    ggplot2::ggsave(save_plot, plot = full_plot)
   }
+  return(full_plot)
 }
 
 #' Plots a jitter plot
@@ -499,13 +390,11 @@ violin_plot <- function(seurat_object, y_val, x_val,
 #' @param y_val a gene (or any conitnuous value from metadata) to plot
 #' @param x_val cluster (or any discrete value from metadata) to plot
 #' @param col_by OPTIONAL what should be used to color the plots. Defaults to cluster
-#' @param color OPTIONAL what colors should be used to color the plots. Defaults to 
-#' RColorBrewer set 9.
 #' @keywords ggplot2, data frame
 #' @export
 
 make_plot_df <- function(seurat_object, y_val, x_val,
-                          col_by = NULL, color = NULL) {
+                          col_by = NULL) {
   # Add y_value to a data frame used for plotting. This value can be a gene
   # or a value from meta data like nGene
   if (y_val %in% rownames(seurat_object@data)) {
@@ -602,8 +491,8 @@ populations_dfs <- function(seurat_object, sample_name, stage_df_all){
 population_plots <- function(stage_df_all, color){
   
   plot_base <- ggplot2::ggplot(data = stage_df_all, ggplot2::aes_(x = ~sample,
-                                                              y = ~percent,
-                                                               fill = ~stage)) +
+                                                                  y = ~percent,
+                                                                  fill = ~stage)) +
     #ggplot2::theme_classic() + 
     ggplot2::xlab("frequency")  +
     ggplot2::geom_bar(stat = "identity") +

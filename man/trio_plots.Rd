@@ -39,6 +39,10 @@ Must end in .pdf or .png. Default is NULL with no saved plot but the plot is pri
 \item{group_color}{OPTIONAL if a plot of group colors should be output. Default
 is true}
 }
+\value{
+a ggplot object containing the jitter or violin plots arranged with
+grid extra
+}
 \description{
 This function allows you to plot three plots on one image that are violin
 or jitter plots given a seurat object. Must have already run FindClusters by
