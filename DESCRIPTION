@@ -1,6 +1,6 @@
 Package: mTEC.10x.pipeline
 Title: Analyze Unbiased Thymic 10x Data
-Version: 0.0.0.9100
+Version: 0.0.0.9200
 Date created: 2018-06-12
 Date last modified: 2018-06-20
 Authors@R: person("Kristen", "Wells", email = "kwells4@stanford.edu", role = c("aut", "cre"))

@@ -4,7 +4,7 @@
 \alias{make_plot_df}
 \title{Plots a data frame that is easily placed into ggplot2}
 \usage{
-make_plot_df(seurat_object, y_val, x_val, col_by = NULL, color = NULL)
+make_plot_df(seurat_object, y_val, x_val, col_by = NULL)
 }
 \arguments{
 \item{seurat_object}{a Seurat object}
@@ -14,9 +14,6 @@ make_plot_df(seurat_object, y_val, x_val, col_by = NULL, color = NULL)
 \item{x_val}{cluster (or any discrete value from metadata) to plot}
 
 \item{col_by}{OPTIONAL what should be used to color the plots. Defaults to cluster}
-
-\item{color}{OPTIONAL what colors should be used to color the plots. Defaults to 
-RColorBrewer set 9.}
 }
 \description{
 This function allows you to take a seurat object and use many pieces from it to make
