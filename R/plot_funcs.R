@@ -2,15 +2,12 @@
 #' 
 #' This function allows you to plot a umap, tsne, cca, or a pca given a seurat
 #' object and either a quality metric, cluster, or a gene. Can only plot genes,
-#' anything from meta.data (quality) or cluster. Returns
-#' a list with ggplot objects. Returns objects under slots pca, tsne, umap
-#' depending on which of the three you ran.
+#' anything from meta.data (quality) or cluster. Returns a ggplot object.
 #' @inheritParams discretePlots
 #' @inheritParams continuousPlots
 #' @inheritParams groupDiscretePlots
 #' @inheritParams groupContinuousPlots
 #' @param seurat_object a Seurat object
-#' @param mtec a Seurat object
 #' @param col_by the name of a gene or column from meta data with which to
 #' colour the plot. Can also be "cluster"
 #' @param plot_type OPTIONAL what type of diminsional reduction to plot. Must be 
@@ -871,4 +868,85 @@ get_avg_exp <- function(seurat_object, avg_expr_id = "stage") {
 
   # Return a data frame of average expression.
   return(avg.expression)
+}
+
+#' Plots average expression of a set of genes as colors on a dim red plot
+#' 
+#' This function allows you to plot average expression of a group of genes on
+#' ' a umap, tsne, cca, or a pca given a seurat object Returns
+#' a list with ggplot objects. Returns objects under slots pca, tsne, umap
+#' depending on which of the three you ran.
+#' @inheritParams plotDimRed
+#' @param seurat_object a Seurat object
+#' @param gene_set a list of genes to compute the average expression for
+#' @param plot_name what to name the plot
+#' @param return_plot OPTIONAL if the average expression should be plotted.
+#' This calls the plotDimRed and inherits all of those plotting parameters.
+#' If return_plot is true, the ggplot object will be returned. If return_plot
+#' is false, the seurat object will be returned with the average expression
+#' values in the meta.data. Default is TRUE.
+#' @return either a ggplot object that is the dimensional reduction of your data
+#' colored by the average expression of your genes or a seurat object updated to
+#' include average expression values for each cell. Return type is decided by
+#' return_plot.
+#' @keywords average gene expression, dim reduction plot
+#' @export
+#' @examples 
+#' plot_gene_set(mTEC.10x.data::mtec_trace, gene_set = c("Aire", "Fezf2"),
+#'   plot_name = "mtecGenes")
+
+#' plot_gene_set(mTEC.10x.data::mtec_trace, gene_set = c("Aire", "Fezf2"),
+#'   plot_name = "mtecGenes", plot_type = "tsne")
+
+plot_gene_set <- function(seurat_obj, gene_set, plot_name,
+                          return_plot = TRUE, ...){
+  gene_set <- gene_set[gene_set %in%
+                       rownames(seurat_obj@data)]
+  mean_exp <- colMeans(as.matrix(seurat_obj@data[gene_set, ]), na.rm = TRUE)
+  if (all(names(x = mean_exp) == rownames(x = seurat_obj@meta.data))) {
+    print("Cell names order match in 'mean_exp' and 'object@meta.data': 
+        adding gene set mean expression vaules in 'object@meta.data$gene.set.score'")
+    seurat_obj@meta.data[[plot_name]] <- mean_exp
+  }
+  if (return_plot){
+    return(plotDimRed(seurat_obj, col_by = plot_name, ...))
+  }
+  return(seurat_obj)
+}
+
+#' Plots average expression of a gene in a population in a line plot
+#' 
+#' This function allows you to plot average expression of a set of genes
+#' in populations of cells within your data set. The populations can
+#' be changed using the parameters for get_avg_exp.
+#' @inheritParams get_avg_exp
+#' @param seurat_object a Seurat object
+#' @param gene_set a list of genes to plot expression in a group of cells
+#' the group can be determined using the parameters for get_avg_exp
+#' @param save_plot OPTIONAL the name of the plot to be saved. If no value
+#' is given, the plot won't be saved and will just be returned. Default
+#' is NULL.
+#' @return a ggplot object that is the line plot of average expression of
+#' each gene in the gene list in each group.
+#' @keywords average gene expression, line plot
+#' @import ggplot2
+#' @export
+#' @examples 
+#' plot_avg_exp(mTEC.10x.data::mtec_trace, gene_list = c("Aire", "Fezf2"))
+
+
+plot_avg_exp_genes <- function(seurat_object, gene_list, save_plot = NULL, ...){
+
+  avg_expression <- get_avg_exp(seurat_object, ...)
+  avg_expression <- avg_expression[rownames(avg_expression) %in% average_gene_list, ]
+  avg_expression$gene <- rownames(avg_expression)
+  avg_expression_melt <- reshape2::melt(avg_expression)
+  base_plot <- ggplot2::ggplot(avg_expression_melt, ggplot2::aes(x = variable, y = value,
+                                                    group = gene)) +
+    ggplot2::geom_line(ggplot2::aes(linetype = gene))  
+
+  if (!(is.null(save_plot))){
+    ggplot2::ggsave(save_plot, plot = base_plot)
+  }
+  return(base_plot)
 }

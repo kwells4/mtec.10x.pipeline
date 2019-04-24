@@ -28,8 +28,6 @@ must be set to a value if highlight_group is true.}
 
 \item{meta_data_col}{the column of the meta data contining the group info to
 highlight}
-
-\item{mtec}{a Seurat object}
 }
 \value{
 a ggplot object that is the dimensional reduction of your data
@@ -38,9 +36,7 @@ colored by the parameter of your choice.
 \description{
 This function allows you to plot a umap, tsne, cca, or a pca given a seurat
 object and either a quality metric, cluster, or a gene. Can only plot genes,
-anything from meta.data (quality) or cluster. Returns
-a list with ggplot objects. Returns objects under slots pca, tsne, umap
-depending on which of the three you ran.
+anything from meta.data (quality) or cluster. Returns a ggplot object.
 }
 \examples{
 plotDimRed(mTEC.10x.data::mtec_trace, "Aire")
