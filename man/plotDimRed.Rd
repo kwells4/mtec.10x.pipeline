@@ -28,6 +28,8 @@ must be set to a value if highlight_group is true.}
 
 \item{meta_data_col}{the column of the meta data contining the group info to
 highlight}
+
+\item{mtec}{a Seurat object}
 }
 \value{
 a ggplot object that is the dimensional reduction of your data

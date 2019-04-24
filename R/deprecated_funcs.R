@@ -45,6 +45,7 @@ tSNE_PCA <- function(mtec, col_by, UMAP = TRUE, tSNE = FALSE,
   }
 }
 
+
 #' Makes a dataframe from multiple seurat objects for one variable
 #' 
 #' This function allows you to take multiple seurat objects and combine
@@ -68,3 +69,4 @@ populations_dfs <- function(seurat_object, sample_name, stage_df_all){
   }
   return(stage_df_all)
 }
+

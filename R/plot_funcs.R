@@ -10,6 +10,7 @@
 #' @inheritParams groupDiscretePlots
 #' @inheritParams groupContinuousPlots
 #' @param seurat_object a Seurat object
+#' @param mtec a Seurat object
 #' @param col_by the name of a gene or column from meta data with which to
 #' colour the plot. Can also be "cluster"
 #' @param plot_type OPTIONAL what type of diminsional reduction to plot. Must be 
@@ -31,6 +32,7 @@
 #' @export
 #' @examples 
 #' plotDimRed(mTEC.10x.data::mtec_trace, "Aire")
+
 #' plotDimRed(mTEC.10x.data::mtec_trace, "nUMI", plot_type = "tsne")
 
 plotDimRed <- function(seurat_object, col_by, plot_type = "umap", dims_use = NULL,
@@ -369,7 +371,6 @@ groupContinuousPlots <- function(group, plot_df, col_by, color = NULL,
     ggplot2::ggsave(save_plot, plot = base_plot)
   }
   return(base_plot)
-  
 }
 
 #' Plots three plots in one image
