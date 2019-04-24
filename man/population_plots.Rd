@@ -4,12 +4,15 @@
 \alias{population_plots}
 \title{Makes a plot of population percents}
 \usage{
-population_plots(stage_df_all, color)
+population_plots(stage_df_all, color, save_plot = NULL)
 }
 \arguments{
 \item{stage_df_all}{a data frame contining the info to plot}
 
 \item{color}{how to color the populations}
+
+\item{save_plot}{OPTIONAL the path of the save file if the file should be saved.
+Must end in .pdf or .png. Default is NULL with no saved plot.}
 }
 \description{
 This function allows you to make a population percent plot from many different

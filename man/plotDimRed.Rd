@@ -2,12 +2,13 @@
 % Please edit documentation in R/plot_funcs.R
 \name{plotDimRed}
 \alias{plotDimRed}
-\title{Plots a UMAP and/or tSNE and/or a PCA}
+\title{Plots a dimensional reduction from a Seurat object}
 \usage{
-plotDimRed(mtec, col_by, plot_type = "umap", dims_use = NULL, ...)
+plotDimRed(seurat_object, col_by, plot_type = "umap", dims_use = NULL,
+  highlight_group = FALSE, group = NULL, meta_data_col = "exp", ...)
 }
 \arguments{
-\item{mtec}{a Seurat object}
+\item{seurat_object}{a Seurat object}
 
 \item{col_by}{the name of a gene or column from meta data with which to
 colour the plot. Can also be "cluster"}
@@ -17,13 +18,23 @@ a diminisional reduction listed in the dr slot of the seurat object. Default is
 UMAP.}
 
 \item{dims_use}{OPTIONAL}
+
+\item{highlight_group}{OPTIONAL if one group from your data should be highlighted.
+Only this group will be colored (other cells will be grey) and the highlighted 
+group will be plotted on top. Default is FALSE}
+
+\item{group}{OPTIONAL which group to highlight if highlight group is selected.
+must be set to a value if highlight_group is true.}
+
+\item{meta_data_col}{the column of the meta data contining the group info to
+highlight}
 }
 \value{
 a ggplot object that is the dimensional reduction of your data
 colored by the parameter of your choice.
 }
 \description{
-This function allows you to plot a tsne and/or a pca given a seurat
+This function allows you to plot a umap, tsne, cca, or a pca given a seurat
 object and either a quality metric, cluster, or a gene. Can only plot genes,
 anything from meta.data (quality) or cluster. Returns
 a list with ggplot objects. Returns objects under slots pca, tsne, umap
@@ -31,7 +42,7 @@ depending on which of the three you ran.
 }
 \examples{
 plotDimRed(mTEC.10x.data::mtec_trace, "Aire")
-plotDimRed(mTEC.10x.data::mtec_trace, "nUMI", tSNE = FALSE, PCA = TRUE)
+plotDimRed(mTEC.10x.data::mtec_trace, "nUMI", plot_type = "tsne")
 }
 \keyword{PCA,}
 \keyword{UMAP,}

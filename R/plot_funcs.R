@@ -1,19 +1,28 @@
-#' Plots a UMAP and/or tSNE and/or a PCA
+#' Plots a dimensional reduction from a Seurat object
 #' 
-#' This function allows you to plot a tsne and/or a pca given a seurat
+#' This function allows you to plot a umap, tsne, cca, or a pca given a seurat
 #' object and either a quality metric, cluster, or a gene. Can only plot genes,
 #' anything from meta.data (quality) or cluster. Returns
 #' a list with ggplot objects. Returns objects under slots pca, tsne, umap
 #' depending on which of the three you ran.
 #' @inheritParams discretePlots
 #' @inheritParams continuousPlots
-#' @param mtec a Seurat object
+#' @inheritParams groupDiscretePlots
+#' @inheritParams groupContinuousPlots
+#' @param seurat_object a Seurat object
 #' @param col_by the name of a gene or column from meta data with which to
 #' colour the plot. Can also be "cluster"
 #' @param plot_type OPTIONAL what type of diminsional reduction to plot. Must be 
 #' a diminisional reduction listed in the dr slot of the seurat object. Default is
 #' UMAP.
 #' @param dims_use OPTIONAL
+#' @param highlight_group OPTIONAL if one group from your data should be highlighted.
+#' Only this group will be colored (other cells will be grey) and the highlighted 
+#' group will be plotted on top. Default is FALSE
+#' @param group OPTIONAL which group to highlight if highlight group is selected.
+#' must be set to a value if highlight_group is true.
+#' @param meta_data_col the column of the meta data contining the group info to
+#' highlight
 #' @return a ggplot object that is the dimensional reduction of your data
 #' colored by the parameter of your choice.
 #' @keywords tSNE, PCA, UMAP, diminsional reduction plot
@@ -22,18 +31,20 @@
 #' @export
 #' @examples 
 #' plotDimRed(mTEC.10x.data::mtec_trace, "Aire")
-#' plotDimRed(mTEC.10x.data::mtec_trace, "nUMI", tSNE = FALSE, PCA = TRUE)
+#' plotDimRed(mTEC.10x.data::mtec_trace, "nUMI", plot_type = "tsne")
 
-plotDimRed <- function(mtec, col_by, plot_type = "umap", dims_use = NULL, ...) {
+plotDimRed <- function(seurat_object, col_by, plot_type = "umap", dims_use = NULL,
+                       highlight_group = FALSE, group = NULL,
+                       meta_data_col = "exp", ...) {
 	# Determine where in Seurat object to find variable to color by
-	if (col_by %in% rownames(mtec@data)){
-		mtec_data <- mtec@data
-		col_by_data <- as.data.frame(mtec_data[col_by, ])
-	}else if (col_by %in% colnames(mtec@meta.data)){
-		mtec_meta_data <- mtec@meta.data
-		col_by_data <- as.data.frame(mtec_meta_data[, col_by, drop = FALSE])
+	if (col_by %in% rownames(seurat_object@data)){
+		seurat_data <- seurat_object@data
+		col_by_data <- as.data.frame(seurat_data[col_by, ])
+	}else if (col_by %in% colnames(seurat_object@meta.data)){
+		seurat_meta_data <- seurat_object@meta.data
+		col_by_data <- as.data.frame(seurat_meta_data[, col_by, drop = FALSE])
 	}else if (col_by == "cluster" | col_by == "Cluster"){
-		col_by_data <- as.data.frame(mtec@ident)
+		col_by_data <- as.data.frame(seurat_object@ident)
 	}else {
 		stop("col_by must be a gene, metric from meta data or 'cluster'")
 	}
@@ -45,8 +56,8 @@ plotDimRed <- function(mtec, col_by, plot_type = "umap", dims_use = NULL, ...) {
     dims_use <- c(1,2)
   }
   # Make a data frame based on the cell embeddings from the plot type of choice
-  if (plot_type %in% names(mtec@dr)){
-    plot_coord <- mtec@dr[[plot_type]]@cell.embeddings
+  if (plot_type %in% names(seurat_object@dr)){
+    plot_coord <- seurat_object@dr[[plot_type]]@cell.embeddings
     plot_names <- colnames(plot_coord)
     ndims <- length(plot_names)
     plot_cols <- lapply(dims_use, function(x){
@@ -65,8 +76,36 @@ plotDimRed <- function(mtec, col_by, plot_type = "umap", dims_use = NULL, ...) {
   } else {
     stop("plot type must be a dimensional reduction in dr slot of Seurat object")
   }
+  # Add in group information if highlighting one group.
+  if (highlight_group){
+    if (is.null(group)){
+      stop("if highlight_group is true, group must be a value from the meta_data
+            column specified")
+    }
+    if (!identical(rownames(seurat_object@meta.data), rownames(plot_df))) {
+      print("must reorder cells")
+      plot_df <- plot_df[match(rownames(seurat_object@meta.data),
+                                       rownames(plot_df)), , drop = FALSE]
+    }
+    plot_df[[meta_data_col]] <- seurat_object@meta.data[[meta_data_col]]
+    if (is.factor(plot_df$all)){
+      plot_df$all <- factor(plot_df$all,
+        levels = c("all_samples", levels(plot_df$all)))
+    }
+    plot_df$all[!(plot_df[[meta_data_col]] %in% group)] <- "all_samples"
+
+    # Plot as descrete
+    if (!is.numeric(plot_df$colour_metric)){
+      return_plot <- groupDiscretePlots(group, plot_df, axis_names = axis_names,
+                                        col_by = col_by, ...)
+    # Plot as continuouts
+    }else{
+      return_plot <- groupContinuousPlots(group, plot_df, axis_names = axis_names,
+                                          col_by = col_by, ...)
+    }
+  }
 	# Plot as discrete
-	if (!is.numeric(col_by_data$colour_metric)){
+	if (!is.numeric(plot_df$colour_metric)){
 		return_plot <- discretePlots(plot_df, axis_names = axis_names,
                                  col_by = col_by, ...)
 
@@ -78,9 +117,9 @@ plotDimRed <- function(mtec, col_by, plot_type = "umap", dims_use = NULL, ...) {
   return(return_plot)
 }
 
-#' Plots discrete colours on a umap, tsne, and or a PCA
+#' Plots discrete colours on a umap, tsne, cca, or a PCA
 #' 
-#' This function allows you to plot discrete colours on a tsne and or a pca
+#' This function allows you to plot discrete colours on a umap, tsne, cca, or a pca
 #' given a seurat object and dataframe. Must have already run FindClusters by
 #' seurat. Called by plotDimRed and works best through that function. Returns
 #' a ggplot object.
@@ -134,9 +173,9 @@ discretePlots <- function(plot_df, col_by, axis_names = c("dim1", "dim2"),
 }
 
 
-#' Plots continuous colours on a tsne and or a PCA
+#' Plots continuous colours on a umap, tsne, cca, or a PCA
 #' 
-#' This function allows you to plot continuous colours on a tsne and or a pca
+#' This function allows you to plot continuous colours on a umap, tsne, cca, or a pca
 #' given a seurat object and dataframe. Must have already run FindClusters by
 #' seurat. CCalled by plotDimRed and works best through that function. Returns
 #' a ggplot object.
@@ -185,6 +224,152 @@ continuousPlots <- function(plot_df, col_by, axis_names = c("dim1", "dim2"),
     ggplot2::ggsave(save_plot, plot = base_plot)
   }
   return(base_plot)
+}
+
+#' Plots discrete colours for one group on a umap, tsne, cca, or a PCA
+#' 
+#' This function allows you to plot discrete colours on a umap, tsne, cca, or a pca
+#' given a seurat object and dataframe. Only one group will be colored
+#' (other cells will be grey) and the highlighted group will be plotted on top.
+#' Must have already run FindClusters by seurat. Called by plotDimRed and works best
+#' through that function. Returns a ggplot object.
+#' @param group the group to highlight. This must be one of the values in the
+#' meta data column being used to determine which cells to plot.
+#' @param plot_df a data_frame containing values used for plotting. This is df
+#' is made by the plotDimRed function. x and y values should be in columns labeled
+#' dim1 and dim2. discrete descriptions of how to color are given in the column
+#' colour_metric.
+#' @param col_by what to use to colour the plot. Can be anything from meta.data
+#' or clusters. This will be the name of the color bar.
+#' @param axis_names OPTIONAL What to name the axes. This will be the default
+#' seurat name of the dimensional reduction if called by plotDimRed. Default is
+#' c("dim1", "dim2")
+#' @param color OPTIONAL what color should be used to color the plots. Must be the same
+#' number of items as col_by. Defaults to set1 from RColorBrewer
+#' @param save_plot OPTIONAL the path of the save file if the file should be saved.
+#' Must end in .pdf or .png. Default is NULL with no saved plot.
+#' @param show_legend OPTIONAL if a legend for the plot should be shown. Default
+#' is TRUE
+#' @return a ggplot object that is the dimensional reduction of your data
+#' colored by the parameter of your choice.
+#' @keywords tSNE, PCA, UMAP, clusters, dimensional reduction plot
+#' @import ggplot2
+#' @import RColorBrewer
+#' @export
+
+
+groupDiscretePlots <- function(group, plot_df, col_by, axis_names = c("dim1", "dim2"),
+                                color = NULL, save_plot = NULL, show_legend = TRUE) {
+  plot1 <- plot_df[plot_df$all == "all_samples", ]
+  plot2 <- plot_df[plot_df$all != "all_samples", ]
+  
+  base_plot <- ggplot2::ggplot(data = plot2, ggplot2::aes_(~dim1,
+                                                             ~dim2))
+  
+  base_plot <- base_plot + ggplot2::geom_point(data = plot1, 
+                                         ggplot2::aes_(~dim1, ~dim2), 
+                                         color = "#DCDCDC",
+                                         size = 1.5,
+                                         show.legend = FALSE)
+  base_plot <- base_plot + ggplot2::geom_point(data = plot2,
+                                         ggplot2::aes_(~dim1, ~dim2,
+                                                       color = ~all),
+                                         size = 1.5,
+                                         show.legend = show_legend)
+  
+  base_plot <- base_plot + #ggplot2::theme_classic() + 
+    ggplot2::ggtitle(paste(group, collapse = "_")) +
+    ggplot2::xlab(axis_names[1]) +
+    ggplot2::ylab(axis_names[2])
+  if (is.null(color)) {
+    nColors <- length(levels(factor(plot2$all)))
+    base_plot <- base_plot + ggplot2::scale_color_manual(
+      values = grDevices::colorRampPalette(
+        RColorBrewer::brewer.pal(9, "Set1"))(nColors), name = col_by)
+   } else {
+    base_plot <- base_plot +
+      ggplot2::scale_color_manual(values = color, name = col_by)
+   }
+
+  if (!(is.null(save_plot))){
+    ggplot2::ggsave(save_plot, plot = base_plot)
+  }
+  return(base_plot)
+}
+
+#' Plots continuous colours for one group on a umap, tsne, cca, or a PCA
+#' 
+#' This function allows you to plot continuous colours on a umap, tsne, cca, or a pca
+#' given a seurat object and dataframe. Only one group will be colored
+#' (other cells will be grey) and the highlighted group will be plotted on top.
+#' Must have already run FindClusters by seurat. Called by plotDimRed and works best
+#' through that function. Returns a ggplot object.
+#' @param group the group to highlight. This must be one of the values in the
+#' meta data column being used to determine which cells to plot.
+#' @param plot_df a data_frame containing values used for plotting. This is df
+#' is made by the plotDimRed function. x and y values should be in columns labeled
+#' dim1 and dim2. continuous descriptions of how to color are given in the column
+#' colour_metric.
+#' @param col_by what to use to colour the plot. Can be anything from meta.data
+#' or clusters. This will be the name of the color bar.
+#' @param axis_names OPTIONAL What to name the axes. This will be the default
+#' seurat name of the dimensional reduction if called by plotDimRed. Default is
+#' c("dim1", "dim2")
+#' @param color OPTIONAL what color should be used to color the plots. Must be a list
+#' of two values, with the first value being the low color. Defaults to blue for low
+#' and red for high.
+#' @param save_plot OPTIONAL the path of the save file if the file should be saved.
+#' Must end in .pdf or .png. Default is NULL with no saved plot.
+#' @param show_legend OPTIONAL if a legend for the plot should be shown. Default
+#' is TRUE
+#' @return a ggplot object that is the dimensional reduction of your data
+#' colored by the parameter of your choice.
+#' @keywords tSNE, PCA, UMAP, clusters, dimensional reduction plot
+#' @import ggplot2
+#' @export
+
+groupContinuousPlots <- function(group, plot_df, col_by, color = NULL,
+                                 limits = NULL, axis_names = c("dim1", "dim2"),
+                                 save_plot = NULL, show_legend = TRUE) {
+  plot_name_comb <- paste(group, collapse = "_")
+  if (is.null(color)) {
+    low <- "#00AFBB"
+    high <- "#FC4E07"
+  }
+  plot1 <- plot_df[plot_df$all == "all_samples", ]
+  plot2 <- plot_df[plot_df$all != "all_samples", ]
+
+  base_plot <- ggplot2::ggplot(data = plot2, ggplot2::aes_(~dim1, ~dim2))
+  
+  base_plot <- base_plot + ggplot2::geom_point(data = plot1, 
+                                         ggplot2::aes_(~dim1, ~dim2), 
+                                         color = "#DCDCDC",
+                                         size = 1.5,
+                                         show.legend = FALSE)
+  base_plot <- base_plot + ggplot2::geom_point(data = plot2,
+                                         ggplot2::aes_(~dim1, ~dim2,
+                                                       color = ~colour_metric),
+                                         size = 1.5,
+                                         show.legend = show_legend)
+  
+  base_plot <- base_plot + #ggplot2::theme_classic() +
+    ggplot2::ggtitle(paste0(plot_name_comb, " ", col_by)) +
+    ggplot2::xlab(axis_names[1]) +
+    ggplot2::ylab(axis_names[2])
+  
+  if(is.null(limits)){
+    base_plot <- base_plot + ggplot2::scale_color_gradient(low = low, high = high, 
+                                                 name = col_by)
+  } else {
+    base_plot <- base_plot + ggplot2::scale_color_gradient(low = low, high = high, 
+                                                 name = col_by, limits = limits)
+  }
+
+  if (!(is.null(save_plot))){
+    ggplot2::ggsave(save_plot, plot = base_plot)
+  }
+  return(base_plot)
+  
 }
 
 #' Plots three plots in one image
@@ -461,21 +646,29 @@ make_plot_df <- function(seurat_object, y_val, x_val,
 #' Could be improved to make the entire df and call the plotting function
 #' @param seurat_object a Seurat object
 #' @param sample_name the name of one sample to add to the plot
-#' @param stage_df_all the data frame containing all samples
+#' @param subsample OPTIONAL if the seurat object should be subsampled by some
+#' parameter. For example, if you wanted to determine the percent of a cell type
+#' in all experiments, subsample would be false. If you wanted to determine the
+#' percent of a cell type in each experiment, this would be TRUE. Default is FALSE
+#' subsample_by OPTIONAL what to use to subsample. Must be a column of meta data.
+#' Default is exp.
+#' meta_data_col OPTIONAL which meta data column to use to determine cell numbers.
+#' For example, the meta data column that describes cell type. Default is "stage"
 #' @keywords population percents
 #' @export
 
-populations_dfs <- function(seurat_object, sample_name, stage_df_all){
-  stage_df <- data.frame(table(seurat_object@meta.data$stage))
+populationsDFS <- function(seurat_object, sample_name, subsample = FALSE,
+                                subsample_by = "exp", meta_data_col = "stage"){
+  if (subsample) {
+    cells_use <- rownames(seurat_object@meta.data)[
+      seurat_object@meta.data[[subsample_by]] == sample_name]
+    seurat_object <- Seurat::SubsetData(seurat_object, cells.use = cells_use)
+  }
+  stage_df <- data.frame(table(seurat_object@meta.data[[meta_data_col]]))
   names(stage_df) <- c("stage", "count")
   stage_df$percent <- stage_df$count / sum(stage_df$count) * 100
   stage_df$sample <- sample_name
-  if(is.null(stage_df_all)){
-    stage_df_all <- stage_df
-  } else {
-    stage_df_all <- rbind(stage_df_all, stage_df)
-  }
-  return(stage_df_all)
+  return(stage_df)
 }
 
 #' Makes a plot of population percents
@@ -484,20 +677,24 @@ populations_dfs <- function(seurat_object, sample_name, stage_df_all){
 #' samples.
 #' @param stage_df_all a data frame contining the info to plot
 #' @param color how to color the populations
+#' @param save_plot OPTIONAL the path of the save file if the file should be saved.
+#' Must end in .pdf or .png. Default is NULL with no saved plot.
 #' @keywords population percents
 #' @import ggplot2
 #' @export
 
-population_plots <- function(stage_df_all, color){
+population_plots <- function(stage_df_all, color, save_plot = NULL){
   
   plot_base <- ggplot2::ggplot(data = stage_df_all, ggplot2::aes_(x = ~sample,
                                                                   y = ~percent,
                                                                   fill = ~stage)) +
-    #ggplot2::theme_classic() + 
     ggplot2::xlab("frequency")  +
     ggplot2::geom_bar(stat = "identity") +
     ggplot2::scale_fill_manual(values = color, name = "stage")
   
+  if (!(is.null(save_plot))){
+    ggplot2::ggsave(save_plot, plot = plot_base)
+  }
   return(plot_base)
 
 }
@@ -507,7 +704,7 @@ population_plots <- function(stage_df_all, color){
 #' 
 #' This function allows you to plot density plot given a seurat
 #' object and either a quality metric or a gene.
-#' @param mtec a Seurat object
+#' @param seurat_object a Seurat object
 #' @param y_val the name of a gene or quality metric with which to make the y
 #' axis of the plot
 #' @param boxplot OPTIONAL if a boxplot should be made. Defaults to TRUE
@@ -521,20 +718,20 @@ population_plots <- function(stage_df_all, color){
 #' Exp_plots(mTEC.10x.data::mtec_trace, "nUMI")
 
 
-Exp_plots <- function(mtec, y_val,
+Exp_plots <- function(seurat_object, y_val,
 						 boxplot = TRUE, vioplot = FALSE, density = FALSE){
-  if (y_val %in% rownames(mtec@data)){
-    mtec_data <- mtec@data
-    y_val_data <- as.data.frame(mtec_data[y_val, ])
-  }else if (y_val %in% colnames(mtec@meta.data)){
-    mtec_meta_data <- mtec@meta.data
-    y_val_data <- as.data.frame(mtec_meta_data[, y_val, drop = FALSE])
+  if (y_val %in% rownames(seurat_object@data)){
+    seurat_data <- seurat_object@data
+    y_val_data <- as.data.frame(seurat_data[y_val, ])
+  }else if (y_val %in% colnames(seurat_object@meta.data)){
+    seurat_meta_data <- seurat_object@meta.data
+    y_val_data <- as.data.frame(seurat_meta_data[, y_val, drop = FALSE])
   }else {
     stop("col_by must be a gene, metric from meta data or 'cluster'")
   }
 	names(y_val_data) <- "y_value"
 
-  y_val_data$cluster <- mtec@ident
+  y_val_data$cluster <- seurat_object@ident
 
 	plot_base <- ggplot2::ggplot(data = y_val_data,
 	                             ggplot2::aes_(~cluster, ~y_value)) +
@@ -588,7 +785,7 @@ Exp_plots <- function(mtec, y_val,
 #' 
 #' This function allows you to plot PCA loadings for any number of genes for any
 #' PC given a Seurat object
-#' @param mtec a Seurat object
+#' @param seurat_object a Seurat object
 #' @param PC_val OPTIONAL which PC loadings to plot. Defaults to "PC1"
 #' @param nLoadings OPTIONAL the number of loadings to plot. Defaults to 10
 #' @param right_pull OPTIONAL plot genes pulling PC to the right. Defaults to
@@ -610,13 +807,13 @@ Exp_plots <- function(mtec, y_val,
 #' PCA_loadings(mTEC.10x.data::mtec_trace, PC_val = "PC2", nLoadings = 20,
 #'				colour_by = mTEC.10x.data::tuft_markers, left_pull = FALSE)
 
-PCA_loadings <- function(mtec, PC_val = "PC1", nLoadings = 10,
+PCA_loadings <- function(seurat_object, PC_val = "PC1", nLoadings = 10,
                          left_pull = TRUE, right_pull = TRUE,
                          colour_by = NULL, full_loadings = FALSE){
 	if (full_loadings){
-		pc_loadings <- data.frame(mtec@dr$pca@gene.loadings.full)
+		pc_loadings <- data.frame(seurat_object@dr$pca@gene.loadings.full)
 	} else {
-		pc_loadings <- data.frame(mtec@dr$pca@gene.loadings)
+		pc_loadings <- data.frame(seurat_object@dr$pca@gene.loadings)
 	}
 	pc_loadings$gene <- rownames(pc_loadings)
 	pc_loadings$PC <- pc_loadings[[PC_val]]
@@ -640,4 +837,37 @@ PCA_loadings <- function(mtec, PC_val = "PC1", nLoadings = 10,
           ggplot2::scale_y_discrete(limits = pc_loadings$gene) +
           ggplot2::labs(x = PC_val) +
           ggplot2::theme(axis.text.y = ggplot2::element_text(colour = cols)))
+}
+
+#' Gets average expression of all genes
+#' 
+#' This function allows you to determine average expression of genes in a 
+#' given grouping. This grouping must be in seurat_object@meta.data
+#' @param seurat_object a seurat object
+#' @param avg_expr_id the OPTIONAL the id of the meta data column containing
+#' the grouping to separate cells by before calculating average expression.
+#' Default is "stage"
+#' @return a data frame of genes by groups with values that are average
+#' expression of each gene within each group.
+#' @keywords group, cluster, average gene expression
+#' @import Seurat
+#' @export
+
+get_avg_exp <- function(seurat_object, avg_expr_id = "stage") {
+  idents <- data.frame(seurat_object@ident)
+
+  # Check that meta data and idents have the same ordering
+  if (!identical(rownames(seurat_object@meta.data), names(seurat_object@ident))){
+    seurat_object@meta.data <- seurat_object[match(rownames(idents),
+                                                   rownames(seurat_object@meta.data))]
+  }
+
+  # Change the identity class to be the specified column from metadata
+  seurat_object <- Seurat::SetAllIdent(seurat_object, id = avg_expr_id)
+
+  # Get average expression using Seurat's average expression command.
+  avg.expression <- log1p(Seurat::AverageExpression(seurat_object))
+
+  # Return a data frame of average expression.
+  return(avg.expression)
 }

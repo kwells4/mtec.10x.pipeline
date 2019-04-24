@@ -32,7 +32,6 @@ tSNE_PCA <- function(mtec, col_by, UMAP = TRUE, tSNE = FALSE,
                    show_legend = TRUE) {
   .Deprecated("plotDimRed")
   if (UMAP){
-  	print("umap")
   	plotDimRed(mtec = mtec, col_by = col_by, plot_type = "umap", color = color,
   		       save_plot = save_plot, show_legend = show_legend)
   }
@@ -44,4 +43,28 @@ tSNE_PCA <- function(mtec, col_by, UMAP = TRUE, tSNE = FALSE,
   	plotDimRed(mtec = mtec, col_by = col_by, plot_type = "pca", color = color,
   		       save_plot = save_plot, show_legend = show_legend)
   }
+}
+
+#' Makes a dataframe from multiple seurat objects for one variable
+#' 
+#' This function allows you to take multiple seurat objects and combine
+#' them for one variable (like cell type) to make a plot of population percents
+#' Could be improved to make the entire df and call the plotting function
+#' @param seurat_object a Seurat object
+#' @param sample_name the name of one sample to add to the plot
+#' @param stage_df_all the data frame containing all samples
+#' @keywords population percents
+#' @export
+
+populations_dfs <- function(seurat_object, sample_name, stage_df_all){
+  stage_df <- data.frame(table(seurat_object@meta.data$stage))
+  names(stage_df) <- c("stage", "count")
+  stage_df$percent <- stage_df$count / sum(stage_df$count) * 100
+  stage_df$sample <- sample_name
+  if(is.null(stage_df_all)){
+    stage_df_all <- stage_df
+  } else {
+    stage_df_all <- rbind(stage_df_all, stage_df)
+  }
+  return(stage_df_all)
 }

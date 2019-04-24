@@ -2,7 +2,7 @@
 % Please edit documentation in R/plot_funcs.R
 \name{continuousPlots}
 \alias{continuousPlots}
-\title{Plots continuous colours on a tsne and or a PCA}
+\title{Plots continuous colours on a umap, tsne, cca, or a PCA}
 \usage{
 continuousPlots(plot_df, col_by, axis_names = c("dim1", "dim2"),
   color = NULL, save_plot = NULL, show_legend = TRUE)
@@ -35,7 +35,7 @@ a ggplot object that is the dimensional reduction of your data
 colored by the parameter of your choice.
 }
 \description{
-This function allows you to plot continuous colours on a tsne and or a pca
+This function allows you to plot continuous colours on a umap, tsne, cca, or a pca
 given a seurat object and dataframe. Must have already run FindClusters by
 seurat. CCalled by plotDimRed and works best through that function. Returns
 a ggplot object.

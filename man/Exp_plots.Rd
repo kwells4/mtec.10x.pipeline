@@ -4,11 +4,11 @@
 \alias{Exp_plots}
 \title{Plots a density plot}
 \usage{
-Exp_plots(mtec, y_val, boxplot = TRUE, vioplot = FALSE,
+Exp_plots(seurat_object, y_val, boxplot = TRUE, vioplot = FALSE,
   density = FALSE)
 }
 \arguments{
-\item{mtec}{a Seurat object}
+\item{seurat_object}{a Seurat object}
 
 \item{y_val}{the name of a gene or quality metric with which to make the y
 axis of the plot}

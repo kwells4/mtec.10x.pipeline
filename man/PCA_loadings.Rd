@@ -4,11 +4,12 @@
 \alias{PCA_loadings}
 \title{Plots PC loadings}
 \usage{
-PCA_loadings(mtec, PC_val = "PC1", nLoadings = 10, left_pull = TRUE,
-  right_pull = TRUE, colour_by = NULL, full_loadings = FALSE)
+PCA_loadings(seurat_object, PC_val = "PC1", nLoadings = 10,
+  left_pull = TRUE, right_pull = TRUE, colour_by = NULL,
+  full_loadings = FALSE)
 }
 \arguments{
-\item{mtec}{a Seurat object}
+\item{seurat_object}{a Seurat object}
 
 \item{PC_val}{OPTIONAL which PC loadings to plot. Defaults to "PC1"}
 
