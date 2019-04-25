@@ -23,7 +23,8 @@ Suggests: scran,
 	reshape,
 	destiny,
     BiocGenerics,
-    mTEC.10x.data
+    mTEC.10x.data,
+    DropletUtils
 License: MIT License
 Encoding: UTF-8
 LazyData: true
