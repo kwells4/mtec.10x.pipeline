@@ -107,8 +107,9 @@ get_umi <- function(seurat_obj, subset_seurat = FALSE, subset_by = "exp",
 #' metadata column specified by batch. This is also the name of the returned
 #' list. Default is "all_cells".
 #' @param lowest_UMI OPTIONAL The value used to downsample the UMI. Default is NULL
-#' @param count OPTIONAL if the count of genes or UMI is returned. Must be "genes" or
-#' "UMI". Default is "genes"
+#' @param count OPTIONAL what should be returned. Can be percents, counts of genes
+#' or counts of UMIs. Can be a list or a character string with values "genes", "UMI",
+#' and/or "percent"
 #' @return a list with two parts. One part is the count of genes/UMI the second is
 #' the percent of all genes expressed. Both parts contain lists of every gene set
 #' named by the gene set
@@ -154,30 +155,36 @@ percents_and_counts <- function(seurat_obj, gene_lists, downsample_UMI = FALSE,
     set.seed(0)
     cell_matrix <- DropletUtils::downsampleMatrix(cell_matrix, prop = factor)
   }
-
-  if (count == "genes") {
+  
+  return_list <- list()
+  if ("genes" %in% count) {
     # Determine the number of genes in each gene set present in each
     # cell in the data set
     count_list <- lapply(names(gene_lists), function(x)
       gene_count_function(cell_matrix, gene_lists[[x]], x))
-  } else if (count == "UMI") {
+    count_df <- do.call(cbind, count_list)
+    count_df$exp <- batch_name
+    return_list$counts <- count_df
+  }
+  if ("UMI" %in% count) {
     # Determine the number of UMIs in each gene set present in each
     # cell in the data set
-    count_list <- lapply(names(gene_lists), function(x)
+    umi_list <- lapply(names(gene_lists), function(x)
       umi_count_function(cell_matrix, gene_lists[[x]], x))
-  } else {
-    stop("count must be 'genes' or 'UMI'")
+    umi_df <- do.call(cbind, umi_list)
+    umi_df$exp <- batch_name
+    return_list$umi <- umi_df
   }
-  count_df <- do.call(cbind, count_list)
-  count_df$exp <- batch_name
-
-  # Determine the percent of genes in each set expressed in ANY cell in the data set
-  # ie percent of genes seen in at least one cell.
-  gene_percent_list <- sapply(names(gene_lists), function(x)
-    percent_list(cell_matrix, gene_lists[[x]], x))
+  if ("percent" %in% count) {
+    # Determine the percent of genes in each set expressed in ANY cell in the data set
+    # ie percent of genes seen in at least one cell.
+    gene_percent_list <- sapply(names(gene_lists), function(x)
+      percent_list(cell_matrix, gene_lists[[x]], x))
+    return_list$percents <- gene_percent_list
+  }
 
   # Return both and name based on the batch 
-  return_list <- list(list(counts = count_df, percents = gene_percent_list))
+  return_list <- list(return_list)
   names(return_list) <- batch_name
   return(return_list)
 }
@@ -266,8 +273,8 @@ percent_list <- function(cell_matrix, gene_list, gene_list_name){
 #' for all gene lists. Works best with sapply as shown in the example
 #' @param percent_counts_list the return value from percents_and_counts
 #' @param list_slot which slot in the list to pull
-#' @param data_type OPTIONAL return "counts" or "percents". Must be one of the
-#' two. Default is "counts"
+#' @param data_type OPTIONAL return "counts", "umi", or "percent". Must be one of the
+#' three. Default is "counts"
 #' @return a named list of the percent of all genes expressed for the gene set
 #' listed in "list_slot"
 #' @keywords percent, gene set, gene count, umi count
@@ -280,12 +287,14 @@ percent_list <- function(cell_matrix, gene_list, gene_list_name){
 
 get_perc_count <- function(percent_counts_list, list_slot, data_type = "counts"){
   percent_counts_one <- percent_counts_list[[list_slot]]
-  if (data_type == "percents") {
+  if (data_type == "percent") {
     return_val <- percent_counts_one$percents
   } else if (data_type == "counts") {
     return_val <- percent_counts_one$counts
+  } else if (data_type == "UMI") {
+    return_val <- percents_counts_one$umi
   } else {
-    stop("must bet either percent or count")
+    stop("must bet either percent, count, or umi")
   }
   return(return_val)
 }

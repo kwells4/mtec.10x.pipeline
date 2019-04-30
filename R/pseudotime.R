@@ -24,11 +24,11 @@ run_monocle <- function(mtec, quality_plots = FALSE, cores = 1, seed = 0){
   if (!requireNamespace("monocle", quietly = TRUE)){
 		stop("Package \"monocle\" needed for this function to work. Please install it.",
 			call. = FALSE)
-	}
-	if (!requireNamespace("reshape", quietly = TRUE)){
+  }
+  if (!requireNamespace("reshape", quietly = TRUE)){
 		stop("Package \"reshape\" needed for this function to work. Please install it.",
 			call. = FALSE)
-	}
+  }
   if (!requireNamespace("BiocGenerics", quietly = TRUE)){
     stop("Package \"BiocGenerics\" needed for this function to work. Please install it.",
          call. = FALSE)
