@@ -108,7 +108,7 @@ get_umi <- function(seurat_obj, subset_seurat = FALSE, subset_by = "exp",
 #' list. Default is "all_cells".
 #' @param lowest_UMI OPTIONAL The value used to downsample the UMI. Default is NULL
 #' @param count OPTIONAL what should be returned. Can be percents, counts of genes
-#' or counts of UMIs. Can be a list or a character string with values "genes", "UMI",
+#' or counts of UMIs. Can be a list or a character string with values "genes", "umi",
 #' and/or "percent"
 #' @return a list with two parts. One part is the count of genes/UMI the second is
 #' the percent of all genes expressed. Both parts contain lists of every gene set
@@ -166,7 +166,7 @@ percents_and_counts <- function(seurat_obj, gene_lists, downsample_UMI = FALSE,
     count_df$exp <- batch_name
     return_list$counts <- count_df
   }
-  if ("UMI" %in% count) {
+  if ("umi" %in% count) {
     # Determine the number of UMIs in each gene set present in each
     # cell in the data set
     umi_list <- lapply(names(gene_lists), function(x)
@@ -291,8 +291,8 @@ get_perc_count <- function(percent_counts_list, list_slot, data_type = "counts")
     return_val <- percent_counts_one$percents
   } else if (data_type == "counts") {
     return_val <- percent_counts_one$counts
-  } else if (data_type == "UMI") {
-    return_val <- percents_counts_one$umi
+  } else if (data_type == "umi") {
+    return_val <- percent_counts_one$umi
   } else {
     stop("must bet either percent, count, or umi")
   }
