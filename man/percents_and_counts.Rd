@@ -29,8 +29,9 @@ list. Default is "all_cells".}
 
 \item{lowest_UMI}{OPTIONAL The value used to downsample the UMI. Default is NULL}
 
-\item{count}{OPTIONAL if the count of genes or UMI is returned. Must be "genes" or
-"UMI". Default is "genes"}
+\item{count}{OPTIONAL what should be returned. Can be percents, counts of genes
+or counts of UMIs. Can be a list or a character string with values "genes", "umi",
+and/or "percent"}
 }
 \value{
 a list with two parts. One part is the count of genes/UMI the second is

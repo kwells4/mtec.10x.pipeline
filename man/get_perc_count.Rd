@@ -11,8 +11,8 @@ get_perc_count(percent_counts_list, list_slot, data_type = "counts")
 
 \item{list_slot}{which slot in the list to pull}
 
-\item{data_type}{OPTIONAL return "counts" or "percents". Must be one of the
-two. Default is "counts"}
+\item{data_type}{OPTIONAL return "counts", "umi", or "percent". Must be one of the
+three. Default is "counts"}
 }
 \value{
 a named list of the percent of all genes expressed for the gene set
