@@ -402,7 +402,8 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
                        plot_jitter = TRUE, plot_violin = FALSE,
                        jitter_and_violin = FALSE, color = NULL,
                        sep_by = "cluster", save_plot = NULL,
-                       nrow = NULL, ncol = NULL, group_color = TRUE){
+                       nrow = NULL, ncol = NULL, group_color = TRUE,
+                       plot_name = NULL){
   gene_list_stage <- c()
   if (plot_jitter) {
     if (group_color) {
@@ -418,7 +419,9 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
     
       # Make a plot consisting of all plots made above
       full_plot <- gridExtra::grid.arrange(grobs = gene_list_stage,
-                                           nrow = length(geneset))
+                                           nrow = length(geneset),
+                                           top = grid::textGrob(plot_name,
+			                   gp = grid::gpar(fontsize=20, font = 3)))
     }
     # Make jitter plots colored by cell cycle stage
     if(cell_cycle){
@@ -453,7 +456,9 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
       ncol <- 1
     }
     full_plot <- gridExtra::grid.arrange(grobs = gene_list_stage,
-                                         nrow = nrow, ncol = ncol)
+                                         nrow = nrow, ncol = ncol,
+                                         top = grid::textGrob(plot_name,
+                                         gp = grid::gpar(fontsize=20, font = 3)))
     
   }
   if (!(is.null(save_plot))){
@@ -480,7 +485,7 @@ trio_plots <- function(seurat_object, geneset, cell_cycle = FALSE,
 jitter_plot <- function(seurat_object, y_val, x_val,
                         col_by = NULL, color = NULL) {
   plot_data <- make_plot_df(seurat_object, y_val, x_val,
-                            col_by, color)
+                            col_by)
   # Determine the number of different colors needed.
   nColors <- length(unique(plot_data$col_by))
   
@@ -532,7 +537,7 @@ violin_plot <- function(seurat_object, y_val, x_val,
                         col_by = NULL, color = NULL,
                         plot_jitter = FALSE) {
   plot_data <- make_plot_df(seurat_object, y_val, x_val,
-                            col_by, color)
+                            col_by)
   # Determine the number of different colors needed.
   nColors <- length(unique(plot_data$col_by))
   

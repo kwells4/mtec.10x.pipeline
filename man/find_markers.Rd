@@ -4,11 +4,11 @@
 \alias{find_markers}
 \title{Finds gene markers between two clusters.}
 \usage{
-find_markers(mtec, ident_1, ident_2, adj_p_val = 0.05, logFC = 1,
-  test_use = "wilcox")
+find_markers(seurat_object, ident_1, ident_2, adj_p_val = 0.05,
+  logFC = 1, test_use = "wilcox")
 }
 \arguments{
-\item{mtec}{A seurat object}
+\item{seurat_object}{A seurat object}
 
 \item{ident_1}{the name of the first cluster you wish to compare}
 

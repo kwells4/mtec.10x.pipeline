@@ -2,15 +2,16 @@
 % Please edit documentation in R/DE.R
 \name{plot_heatmap}
 \alias{plot_heatmap}
-\title{Plots a heatmap and will label genes of interest if given. Can only plot
-DE genes put in the DE slot after running significant markers.}
+\title{Plot a heatmap of specific genes
+This function plots a gene list and will label genes of interest if given.
+Can only plot DE genes put in the DE slot after running significant markers.}
 \usage{
-plot_heatmap(mtec, cell_color = NULL, subset_list = NULL,
+plot_heatmap(seurat_object, cell_color = NULL, subset_list = NULL,
   color_list = NULL, color_list2 = NULL, order_cells = TRUE,
   seed = 0)
 }
 \arguments{
-\item{mtec}{A seurat object}
+\item{seurat_object}{A seurat object}
 
 \item{cell_color}{OPTIONAL a list of colors to color the cell labels at the
 top of the plot. Defaults to NULL and uses color brewer set1}
@@ -27,8 +28,9 @@ Defaults to TRUE}
 \item{seed}{OPTIONAL the seed to use for reproducability. Defaults to 0.}
 }
 \description{
-Plots a heatmap and will label genes of interest if given. Can only plot
-DE genes put in the DE slot after running significant markers.
+Plot a heatmap of specific genes
+This function plots a gene list and will label genes of interest if given.
+Can only plot DE genes put in the DE slot after running significant markers.
 }
 \examples{
 \dontrun{

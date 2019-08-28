@@ -7,7 +7,7 @@
 trio_plots(seurat_object, geneset, cell_cycle = FALSE,
   plot_jitter = TRUE, plot_violin = FALSE, jitter_and_violin = FALSE,
   color = NULL, sep_by = "cluster", save_plot = NULL, nrow = NULL,
-  ncol = NULL, group_color = TRUE)
+  ncol = NULL, group_color = TRUE, plot_name = NULL)
 }
 \arguments{
 \item{seurat_object}{a Seurat object}

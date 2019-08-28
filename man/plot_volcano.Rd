@@ -2,9 +2,10 @@
 % Please edit documentation in R/DE.R
 \name{plot_volcano}
 \alias{plot_volcano}
-\title{Plots a volcano plot and labels highest fold change genes (both up
-and down). Works best when called by significant_markers, but will
-work if given a full gene list.}
+\title{Plots a volcano plot
+This function plots a volcano plot and labels highest fold change
+genes (both up and down). Works best when called by significant_markers,
+but will work if given a full gene list.}
 \usage{
 plot_volcano(marker_genes, title, num_genes = 5)
 }
@@ -19,9 +20,10 @@ find_markers function}
 5.}
 }
 \description{
-Plots a volcano plot and labels highest fold change genes (both up
-and down). Works best when called by significant_markers, but will
-work if given a full gene list.
+Plots a volcano plot
+This function plots a volcano plot and labels highest fold change
+genes (both up and down). Works best when called by significant_markers,
+but will work if given a full gene list.
 }
 \keyword{plot}
 \keyword{volcano}

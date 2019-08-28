@@ -3,14 +3,14 @@
 #' This function allows you to find significant markers between
 #' two clusters (or pairwise between any clusters you choose).
 #' Uses seurat FindMarkers to find DE genes.
-#' Requries a mTEC seurat object where FindClusters has already been
+#' Requries a seurat object where FindClusters has already been
 #' run. If no list is given, will perform pairwise analysis of all
 #' clusters. If list is given, will perform pairwise analysis of list
 #' given. Can optionally plot a volcano plot with any number of top
 #' genes labeled on the plot. Returns a new seurat object containing
 #' DE genes in the assay slot (in a list called DE)
 #' 
-#' @param mtec A seurat object
+#' @param seurat_object A seurat object
 #' @param cluster_list OPTIONAL A list of cluster names to perform DE
 #' between. Defaults to NULL (all clusters in object)
 #' @param adj_p_val OPTIONAL The pvalue to call for significance
@@ -31,24 +31,12 @@
 #' plot_volcano = TRUE)
 #' }
 
-significant_markers <- function(mtec,
-                                cluster_list = NULL,
-                                adj_p_val    = 0.05,
-                                logFC        = 1.0,
-                                plot_volcano = FALSE,
-                                num_genes    = 5,
-                                test_use     = "wilcox"){
-  
-  # Grab exisiting list or make a new list
-  if (is.null(mtec@assay$DE)){
-    de_list <- list()
-  } else {
-    de_list <- mtec@assay$DE
-  }
+significant_markers <- function(seurat_object,
+                                cluster_list = NULL, ...){
   
   # Do DE of all clusters if no list is given
   if (is.null(cluster_list)){
-    clusters <- mtec@ident
+    clusters <- seurat_object@ident
     cluster_vals <- levels(factor(clusters))
   } else {
     cluster_vals <- cluster_list
@@ -56,38 +44,62 @@ significant_markers <- function(mtec,
   
   # Determine all pair-wise combinations of clusters given
   combinations <- utils::combn(cluster_vals, 2)
-  for (i in 1:ncol(combinations)){
-    ident_1 <- combinations[1, i]
-    ident_2 <- combinations[2, i]
+
+  # Run DE between all pairwise clusters and return a list of all DE genes
+  de_list_all <- sapply(1:ncol(combinations), function(x)
+    DE_two_clusters(seurat_object, combinations[1, x], combinations[2, x], ...))
+  
+  # Add the DE lists to the seurat object (append to an existing list or create a
+    # new slot)
+  if (is.null(seurat_object@assay$DE)){
+    seurat_object@assay$DE <- de_list_all
+  } else {
+    previously_covered <- names(de_list_all) %in% names(seurat_object@assay$DE)
+    previously_covered_DE <- names(de_list_all)[previously_covered]
+    if(length(previously_covered_DE) > 0) {
+      print(paste0("replacing ", previously_covered_DE, " in DE slot"))
+      seurat_object@assay$DE <- modifyList(seurat_object@assay$DE, de_list_all)
+    } else {
+      seurat_object@assay$DE <- c(seurat_object@assay$DE, de_list_all)
+    }
+  }
+
+  return(seurat_object)
+}
+
+DE_two_clusters <- function(seurat_object,
+                            ident_1, ident_2,
+                            adj_p_val    = 0.05,
+                            logFC        = 1.0,
+                            plot_volcano = FALSE,
+                            num_genes    = 5,
+                            test_use     = "wilcox"){
     
-    # Find markers between two clusters
-    cluster_markers <- find_markers(mtec, ident_1, ident_2, adj_p_val, logFC,
+  # Find markers between two clusters
+  cluster_markers <- find_markers(seurat_object, ident_1, ident_2, adj_p_val, logFC,
                                     test_use)
     
-    # Name the comparison
-    slot_name <- paste0(as.character(ident_1), "v", as.character(ident_2))
+  # Name the comparison
+  slot_name <- paste0(as.character(ident_1), "v", as.character(ident_2))
     
-    if (plot_volcano){
-      title <- slot_name
+  if (plot_volcano){
+    title <- slot_name
       
-      # Get a list of significant genes and make a volcano plot
-      DE_sig <- plot_volcano(cluster_markers, title, num_genes)
+    # Get a list of significant genes and make a volcano plot
+    DE_sig <- plot_volcano(cluster_markers, title, num_genes)
       
-    } else {
+  } else {
       
-      # Make a dataframe consisting of significant and high fold change genes
-      DE_sig <- cluster_markers[cluster_markers$group ==
-                                  "Significant&FoldChange", ]
-    }
-    DE_sig$genes <- rownames(DE_sig)
-    
-    # Add newest DE to list
-    de_list[[slot_name]] <- DE_sig
+    # Make a dataframe consisting of significant and high fold change genes
+    DE_sig <- cluster_markers[cluster_markers$group ==
+                                "Significant&FoldChange", ]
   }
-  
-  # Add DE list to assay slot of seurat
-  mtec@assay$DE <- de_list
-  return(mtec)
+  DE_sig$genes <- rownames(DE_sig)
+    
+  # Add newest DE to list
+  de_list <- list(DE_sig)
+  names(de_list) <- slot_name
+  return(de_list)
 }
 
 #' Finds gene markers between two clusters.
@@ -97,7 +109,7 @@ significant_markers <- function(mtec,
 #' (significant/fold change). Meant to be called by significant markers,
 #' but can work independently. Uses FindMarkers from seurat to call
 #' DE genes
-#' @param mtec A seurat object
+#' @param seurat_object A seurat object
 #' @param ident_1 the name of the first cluster you wish to compare
 #' @param ident_2 the name of the second cluster you wish to compare
 #' @param adj_p_val OPTIONAL the p_value used to call significance.
@@ -108,11 +120,11 @@ significant_markers <- function(mtec,
 #' @keywords find markers
 #' @export
 
-find_markers <- function(mtec, ident_1, ident_2, adj_p_val = 0.05,
+find_markers <- function(seurat_object, ident_1, ident_2, adj_p_val = 0.05,
                          logFC = 1.0, test_use = "wilcox"){
   # Run FindMarkers from seurat on the two clusters that are called. Use
   # A random seed for consistent results.
-  cluster_markers <- Seurat::FindMarkers(object          = mtec,
+  cluster_markers <- Seurat::FindMarkers(object          = seurat_object,
                                          ident.1         = ident_1,
                                          ident.2         = ident_2,
                                          random.seed     = 0,
@@ -144,9 +156,11 @@ find_markers <- function(mtec, ident_1, ident_2, adj_p_val = 0.05,
   return(cluster_markers)
 }
 
-#' Plots a volcano plot and labels highest fold change genes (both up
-#' and down). Works best when called by significant_markers, but will
-#' work if given a full gene list.
+#' Plots a volcano plot
+
+#' This function plots a volcano plot and labels highest fold change
+#' genes (both up and down). Works best when called by significant_markers,
+#' but will work if given a full gene list.
 #' @param marker_genes a data frame containing a list of genes and
 #' a colum containing significance information. This df is made by the 
 #' find_markers function
@@ -198,9 +212,10 @@ plot_volcano <- function(marker_genes, title, num_genes = 5){
 }
 
 
-#' Plots a heatmap and will label genes of interest if given. Can only plot
-#' DE genes put in the DE slot after running significant markers.
-#' @param mtec A seurat object
+#' Plot a heatmap of specific genes
+#' This function plots a gene list and will label genes of interest if given.
+#' Can only plot DE genes put in the DE slot after running significant markers.
+#' @param seurat_object A seurat object
 #' @param cell_color OPTIONAL a list of colors to color the cell labels at the
 #' top of the plot. Defaults to NULL and uses color brewer set1
 #' @param subset_list OPTIONAL a list of genes to subset the data. Defaults
@@ -219,32 +234,32 @@ plot_volcano <- function(marker_genes, title, num_genes = 5){
 #' plot_heatmap(mTEC.10x.data::mtec_trace, subset_list = mTEC.10x.data::TFs,
 #' color_list = c("Aire", "Hmgb2"), order_cells = TRUE)
 
-plot_heatmap <- function(mtec, cell_color = NULL, subset_list = NULL,
+plot_heatmap <- function(seurat_object, cell_color = NULL, subset_list = NULL,
   color_list = NULL, color_list2 = NULL, order_cells = TRUE,
   seed = 0){
-  mtec_data <- mtec@data
+  count_data <- seurat_object@data
   
   # Make a complete df of DE genes (combining all slots in list)
-  DE_df <- data.table::rbindlist(mtec@assay$DE)
+  DE_df <- data.table::rbindlist(seurat_object@assay$DE)
   DE_genes <- unique(DE_df$genes)
   
   # Subset the list if desired (ie by a list of specific genes)
   if (!is.null(subset_list)){
     DE_genes <- DE_genes[DE_genes %in% subset_list]
-    mtec_data <- mtec_data[rownames(mtec_data) %in% DE_genes, ]
+    count_data <- count_data[rownames(count_data) %in% DE_genes, ]
   }
-  mtec_data <- as.matrix(mtec_data)
+  count_data <- as.matrix(count_data)
   
   # Center values to plot on heatmap
-  mtec_data_heatmap <- t(scale(t(mtec_data), scale = FALSE))
-  cluster <- as.data.frame(mtec@ident)
+  count_data_heatmap <- t(scale(t(count_data), scale = FALSE))
+  cluster <- as.data.frame(seurat_object@ident)
   names(cluster) <- "cluster_val"
   
   # Order cells by cluster
   if (order_cells){
     cluster <- cluster[order(cluster$cluster_val), , drop=FALSE]
-    mtec_data_heatmap <- mtec_data_heatmap[, match(rownames(cluster),
-                                                   colnames(mtec_data_heatmap))]
+    count_data_heatmap <- count_data_heatmap[, match(rownames(cluster),
+                                                   colnames(count_data_heatmap))]
   }
 
   colors <- as.numeric(cluster$cluster_val)
@@ -254,19 +269,19 @@ plot_heatmap <- function(mtec, cell_color = NULL, subset_list = NULL,
     col1 <- RColorBrewer::brewer.pal(length(levels(cluster$cluster_val)), "Set1")
   }
   
-  cols <- rep("black", nrow(mtec_data_heatmap))
+  cols <- rep("black", nrow(count_data_heatmap))
   
   # Color some text red if desired
   if (!is.null(color_list)){
-    cols[row.names(mtec_data_heatmap) %in% color_list] <- "red"
+    cols[row.names(count_data_heatmap) %in% color_list] <- "red"
   }
   if (!is.null(color_list2)){
-    cols[row.names(mtec_data_heatmap) %in% color_list2] <- "blue"
+    cols[row.names(count_data_heatmap) %in% color_list2] <- "blue"
   }
 
   # Seed for reporducibility
   set.seed(seed)
-  gplots::heatmap.2(mtec_data_heatmap,
+  gplots::heatmap.2(count_data_heatmap,
                     density.info  = "none",
                     labCol        = FALSE,
                     Colv          = !order_cells,

@@ -4,12 +4,10 @@
 \alias{significant_markers}
 \title{Finds significant markers (DE genes) between clusters}
 \usage{
-significant_markers(mtec, cluster_list = NULL, adj_p_val = 0.05,
-  logFC = 1, plot_volcano = FALSE, num_genes = 5,
-  test_use = "wilcox")
+significant_markers(seurat_object, cluster_list = NULL, ...)
 }
 \arguments{
-\item{mtec}{A seurat object}
+\item{seurat_object}{A seurat object}
 
 \item{cluster_list}{OPTIONAL A list of cluster names to perform DE
 between. Defaults to NULL (all clusters in object)}
@@ -32,7 +30,7 @@ volcano plot if you choose to plot it. Defaults to 5.}
 This function allows you to find significant markers between
 two clusters (or pairwise between any clusters you choose).
 Uses seurat FindMarkers to find DE genes.
-Requries a mTEC seurat object where FindClusters has already been
+Requries a seurat object where FindClusters has already been
 run. If no list is given, will perform pairwise analysis of all
 clusters. If list is given, will perform pairwise analysis of list
 given. Can optionally plot a volcano plot with any number of top
