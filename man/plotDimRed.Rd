@@ -28,6 +28,10 @@ must be set to a value if highlight_group is true.}
 
 \item{meta_data_col}{the column of the meta data contining the group info to
 highlight}
+
+\item{\dots}{paramaters to pass to discretePlots, continuousPlots,
+groupDiscretePlots, or groupContinuousPlots depending on what type of output is
+made}
 }
 \value{
 a ggplot object that is the dimensional reduction of your data

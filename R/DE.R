@@ -10,6 +10,7 @@
 #' genes labeled on the plot. Returns a new seurat object containing
 #' DE genes in the assay slot (in a list called DE)
 #' 
+#' @inheritParams DE_two_clusters
 #' @param seurat_object A seurat object
 #' @param cluster_list OPTIONAL A list of cluster names to perform DE
 #' between. Defaults to NULL (all clusters in object)
@@ -22,6 +23,7 @@
 #' @param num_genes OPTIONAL the number of genes to plot on the 
 #' volcano plot if you choose to plot it. Defaults to 5.
 #' @param test_use OPTIONAL which DE test to use
+#' @param \dots paramaters to pass to DE_two_clusters
 #' @keywords DE, volcano plot
 #' @export
 #' @examples
@@ -67,13 +69,46 @@ significant_markers <- function(seurat_object,
   return(seurat_object)
 }
 
+#' Finds significant markers (DE genes) between clusters
+#' 
+#' This function allows you to find significant markers between
+#' two clusters (or pairwise between any clusters you choose).
+#' Uses seurat FindMarkers to find DE genes.
+#' Requries a seurat object where FindClusters has already been
+#' run. If no list is given, will perform pairwise analysis of all
+#' clusters. If list is given, will perform pairwise analysis of list
+#' given. Can optionally plot a volcano plot with any number of top
+#' genes labeled on the plot. Returns a new seurat object containing
+#' DE genes in the assay slot (in a list called DE)
+#' 
+#' @inheritParams plot_volcano
+#' @param seurat_object A seurat object
+#' @param ident_1 the identity of the first group to compare
+#' @param ident_1 the identity of the second group to compare
+#' @param adj_p_val OPTIONAL The pvalue to call for significance
+#' Defaults to 0.05
+#' @param logFC OPTIONAL The log full change to call significant.
+#' Defaults to 1 (a 2 fold change)
+#' @param plot_volcano OPTIONAL if a volcano plot should be made.
+#' Defaults to FALSE.
+#' @param test_use OPTIONAL which DE test to use
+#' @param \dots paramaters to pass to plot_volcano
+#' @keywords DE, volcano plot
+#' @export
+#' @examples
+#' \dontrun{
+#' significant_markers(mTEC.10x.data::mtec_trace)
+#' significant_markers(mTEC.10x.data::mtec_trace, cluster_list = c(5, 6),
+#' plot_volcano = TRUE)
+#' }
+
 DE_two_clusters <- function(seurat_object,
                             ident_1, ident_2,
                             adj_p_val    = 0.05,
                             logFC        = 1.0,
                             plot_volcano = FALSE,
-                            num_genes    = 5,
-                            test_use     = "wilcox"){
+                            test_use     = "wilcox",
+                            ...){
     
   # Find markers between two clusters
   cluster_markers <- find_markers(seurat_object, ident_1, ident_2, adj_p_val, logFC,

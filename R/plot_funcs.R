@@ -21,6 +21,9 @@
 #' must be set to a value if highlight_group is true.
 #' @param meta_data_col the column of the meta data contining the group info to
 #' highlight
+#' @param \dots paramaters to pass to discretePlots, continuousPlots,
+#' groupDiscretePlots, or groupContinuousPlots depending on what type of output is
+#' made
 #' @return a ggplot object that is the dimensional reduction of your data
 #' colored by the parameter of your choice.
 #' @keywords tSNE, PCA, UMAP, diminsional reduction plot
@@ -35,21 +38,21 @@
 plotDimRed <- function(seurat_object, col_by, plot_type = "umap", dims_use = NULL,
                        highlight_group = FALSE, group = NULL,
                        meta_data_col = "exp", ...) {
-	# Determine where in Seurat object to find variable to color by
-	if (col_by %in% rownames(seurat_object@data)){
-		seurat_data <- seurat_object@data
-		col_by_data <- as.data.frame(seurat_data[col_by, ])
-	}else if (col_by %in% colnames(seurat_object@meta.data)){
-		seurat_meta_data <- seurat_object@meta.data
-		col_by_data <- as.data.frame(seurat_meta_data[, col_by, drop = FALSE])
-	}else if (col_by == "cluster" | col_by == "Cluster"){
-		col_by_data <- as.data.frame(seurat_object@ident)
-	}else {
-		stop("col_by must be a gene, metric from meta data or 'cluster'")
-	}
+  # Determine where in Seurat object to find variable to color by
+  if (col_by %in% rownames(seurat_object@data)){
+    seurat_data <- seurat_object@data
+    col_by_data <- as.data.frame(seurat_data[col_by, ])
+  }else if (col_by %in% colnames(seurat_object@meta.data)){
+    seurat_meta_data <- seurat_object@meta.data
+    col_by_data <- as.data.frame(seurat_meta_data[, col_by, drop = FALSE])
+  }else if (col_by == "cluster" | col_by == "Cluster"){
+    col_by_data <- as.data.frame(seurat_object@ident)
+  }else {
+    stop("col_by must be a gene, metric from meta data or 'cluster'")
+  }
 
-	# Make the name in the data frame the same regardless of what it was originally
-	names(col_by_data) <- "colour_metric"
+  # Make the name in the data frame the same regardless of what it was originally
+  names(col_by_data) <- "colour_metric"
 
   if (is.null(dims_use)){
     dims_use <- c(1,2)
@@ -103,16 +106,16 @@ plotDimRed <- function(seurat_object, col_by, plot_type = "umap", dims_use = NUL
                                           col_by = col_by, ...)
     }
   }
-	# Plot as discrete
-	if (!is.numeric(plot_df$colour_metric)){
-		return_plot <- discretePlots(plot_df, axis_names = axis_names,
+  # Plot as discrete
+  if (!is.numeric(plot_df$colour_metric)){
+    return_plot <- discretePlots(plot_df, axis_names = axis_names,
                                  col_by = col_by, ...)
 
-	# Plot as continuous
-	}else{
-		return_plot <- continuousPlots(plot_df, axis_names = axis_names,
+  # Plot as continuous
+  }else{
+    return_plot <- continuousPlots(plot_df, axis_names = axis_names,
                                    col_by = col_by, ...)
-	}
+  }
   return(return_plot)
 }
 
@@ -890,6 +893,7 @@ get_avg_exp <- function(seurat_object, avg_expr_id = "stage") {
 #' If return_plot is true, the ggplot object will be returned. If return_plot
 #' is false, the seurat object will be returned with the average expression
 #' values in the meta.data. Default is TRUE.
+#' @param \dots paramaters to pass to plotDimRed
 #' @return either a ggplot object that is the dimensional reduction of your data
 #' colored by the average expression of your genes or a seurat object updated to
 #' include average expression values for each cell. Return type is decided by

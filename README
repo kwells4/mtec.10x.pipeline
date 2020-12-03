@@ -1,7 +1,7 @@
 mTEC.10x.pipeline
 ======================
 
-mTEC.10x.pipeline is a toolkit to accompany the single cell mTEC paper currently in progress. To use this package,
+mTEC.10x.pipeline is a toolkit to accompany the single cell mTEC paper "Combined transient ablation and single cell RNA sequencing reveals the development of medullary thymic epithelial cells" published in eLife.. To use this package,
 you will need the R statistical computing environment (version 3.0 or later) and several packages available through
 Bioconductor and CRAN
 

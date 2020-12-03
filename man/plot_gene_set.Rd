@@ -17,6 +17,10 @@ If return_plot is true, the ggplot object will be returned. If return_plot
 is false, the seurat object will be returned with the average expression
 values in the meta.data. Default is TRUE.}
 
+\item{...}{paramaters to pass to discretePlots, continuousPlots,
+groupDiscretePlots, or groupContinuousPlots depending on what type of output is
+made}
+
 \item{seurat_object}{a Seurat object}
 }
 \value{
